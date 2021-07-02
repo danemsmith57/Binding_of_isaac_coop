@@ -1,6 +1,6 @@
 --references: 
 --           documentation: https://wofsauge.github.io/IsaacDocs/rep/index.html
---           log file: C:\Users\danem\Documents\My Games\Binding of Isaac Repentance\log.txt
+--           log file: C:\Users\danem\Documents\"My Games"\"Binding of Isaac Repentance"
 --           tail command in windows powershell: Get-Content log.txt -Wait -Tail 10
 
 local mod_name = "More_Treasure";
@@ -61,7 +61,7 @@ function mod:count_items()
         if room_descriptor ~= nil then
         
             local room = room_descriptor.Data;
-            if room.Type == RoomType.ROOM_TREASURE then
+            if room.Type == RoomType.ROOM_TREASURE or room.Type == RoomType.ROOM_PLANETARIUM then
                 items_to_spawn = items_to_spawn + (num_players - 1);
             end;
         end;
@@ -69,6 +69,18 @@ function mod:count_items()
     Isaac.DebugString(mod_name .. unit_name .. " Finished: " .. unit_name .. " items_to_spawn: " .. items_to_spawn);
     return items_to_spawn;
 end;
+
+function mod:get_location()
+    
+    local location = Vector(0,0);
+    local room  = game:GetRoom();
+
+    local room_center = room:GetCenterPos();
+
+    location = room:FindFreePickupSpawnPosition(room_center, 2);
+    print("location: " .. tostring(location));
+    return location;
+end
 
 
 --------------------------------------------------------------------------------------------------------
@@ -105,12 +117,12 @@ function mod:spawn_items()
     Isaac.DebugString(mod_name .. unit_name .. " items_to_spawn: " .. items_to_spawn);
     Isaac.DebugString(mod_name .. unit_name .. " is_first_visit: " .. tostring(the_room:IsFirstVisit()));
     Isaac.DebugString(mod_name .. unit_name .. " room_type: " .. room_type);
-    if room_type == RoomType.ROOM_TREASURE and items_to_spawn > 0 and the_room:IsFirstVisit() then
+    if (room_type == RoomType.ROOM_TREASURE or room_type == RoomType.ROOM_PLANETARIUM) and items_to_spawn > 0 and the_room:IsFirstVisit() then
         for i = 1, num_players - 1 do
             --get an item id from the pool of the current room
             local item_id = item_pool:GetCollectible(item_pool_for_room, false, game_seed)
-
-            Isaac.Spawn(EntityType.ENTITY_PICKUP, PickupVariant.PICKUP_COLLECTIBLE, item_id, in_front_of_player, zero, nil);
+            
+            Isaac.Spawn(EntityType.ENTITY_PICKUP, PickupVariant.PICKUP_COLLECTIBLE, item_id, mod.get_location(), zero, nil);
             items_to_spawn = items_to_spawn - 1;
         end;
     end;
@@ -118,4 +130,4 @@ end;
 
 -- mod:AddCallback(ModCallbacks.MC_POST_UPDATE, mod.give_the_trinket, EntityType.ENTITY_PLAYER);
 mod:AddCallback(ModCallbacks.MC_POST_NEW_ROOM, mod.spawn_items, EntityType.ENTITY_PLAYER);
-mod:AddCallback(ModCallbacks.MC_POST_NEW_LEVEL, mod.count_items, EntityType.ENTITY_PLAYER);
+-- mod:AddCallback(ModCallbacks.MC_POST_NEW_LEVEL, mod.count_items, EntityType.ENTITY_PLAYER);
