@@ -1,12 +1,12 @@
 --references: 
 --           documentation: https://wofsauge.github.io/IsaacDocs/rep/index.html
+--           log file: C:\Users\danem\Documents\My Games\Binding of Isaac Repentance\log.txt
+--           tail command in windows powershell: Get-Content log.txt -Wait -Tail 10
 
-
-
---don't try and store the name in a variable. It doesn't like that
-local mod = RegisterMod("Dane and Devin's Co-op", 1);
+local mod_name = "More_Treasure";
+local mod = RegisterMod(mod_name, 1);
+local mod_name = mod_name .. ":";
 local game = Game();
-local the_seed = Seeds.InitSeedInfo();
 
 function mod:give_the_trinket()
 
@@ -42,19 +42,19 @@ end
 
 --------------------------------------------------------------------------------------------------------
 --This function controls a count of items that should be spawned for each additional player in the game
+--for each floor.
 --------------------------------------------------------------------------------------------------------
-
-function mod:set_items_to_spawn_for_floor()
+function mod:count_items()
     
-    unit_name = "set_items_to_spawn_for_floor";
-    print("Entering: " .. unit_name);
+    local unit_name = "count_items:";
+    Isaac.DebugString(mod_name .. unit_name .. " Entering: " .. unit_name);
 
     local items_to_spawn = 0;
     local num_players = game:GetNumPlayers();
     local level = game:GetLevel();
     local rooms = level:GetRooms();
 
-    for i = 1, #rooms do
+    for i = 1, #rooms - 1 do
 
         local room_descriptor = rooms:Get(i);
         
@@ -66,7 +66,7 @@ function mod:set_items_to_spawn_for_floor()
             end;
         end;
     end;
-    print("items_to_spawn: " .. items_to_spawn);
+    Isaac.DebugString(mod_name .. unit_name .. " Finished: " .. unit_name .. " items_to_spawn: " .. items_to_spawn);
     return items_to_spawn;
 end;
 
@@ -74,12 +74,12 @@ end;
 --------------------------------------------------------------------------------------------------------
 --This function spawns an extra item in the treasure room for each extra player in the game
 --------------------------------------------------------------------------------------------------------
-function mod:spawn_items_in_treasure_room()
+function mod:spawn_items()
     
-    unit_name = "spawn_items_in_treasure_room";
-    print("Entering: " .. unit_name);
+    local unit_name = "spawn_items:";
+    Isaac.DebugString(mod_name .. unit_name .. " Entering: " .. unit_name);
 
-    local items_to_spawn = mod.set_items_to_spawn_for_floor();
+    local items_to_spawn = mod.count_items();
 
     local num_players = game:GetNumPlayers();
     local player = Isaac.GetPlayer(0);
@@ -102,9 +102,9 @@ function mod:spawn_items_in_treasure_room()
     local item_pool_for_room = item_pool:GetPoolForRoom(room_type, game_seed)
 
     --Check if the current room is a treasure room
-    print("items_to_spawn: " .. items_to_spawn);
-    print("is_first_visit: " .. tostring(the_room:IsFirstVisit()));
-    print("room_type: " .. room_type);
+    Isaac.DebugString(mod_name .. unit_name .. " items_to_spawn: " .. items_to_spawn);
+    Isaac.DebugString(mod_name .. unit_name .. " is_first_visit: " .. tostring(the_room:IsFirstVisit()));
+    Isaac.DebugString(mod_name .. unit_name .. " room_type: " .. room_type);
     if room_type == RoomType.ROOM_TREASURE and items_to_spawn > 0 and the_room:IsFirstVisit() then
         for i = 1, num_players - 1 do
             --get an item id from the pool of the current room
@@ -117,5 +117,5 @@ function mod:spawn_items_in_treasure_room()
 end;
 
 -- mod:AddCallback(ModCallbacks.MC_POST_UPDATE, mod.give_the_trinket, EntityType.ENTITY_PLAYER);
-mod:AddCallback(ModCallbacks.MC_POST_NEW_ROOM, mod.spawn_items_in_treasure_room, EntityType.ENTITY_PLAYER);
-mod:AddCallback(ModCallbacks.MC_POST_NEW_LEVEL, mod.set_items_to_spawn_for_floor, EntityType.ENTITY_PLAYER);
+mod:AddCallback(ModCallbacks.MC_POST_NEW_ROOM, mod.spawn_items, EntityType.ENTITY_PLAYER);
+mod:AddCallback(ModCallbacks.MC_POST_NEW_LEVEL, mod.count_items, EntityType.ENTITY_PLAYER);
