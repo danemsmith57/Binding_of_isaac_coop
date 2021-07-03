@@ -5,7 +5,6 @@
 
 local mod_name = "More_Treasure";
 local mod = RegisterMod(mod_name, 1);
-local mod_name = mod_name .. ":";
 local game = Game();
 
 function mod:give_the_trinket()
@@ -47,7 +46,7 @@ end
 function mod:count_items()
     
     local unit_name = "count_items:";
-    Isaac.DebugString(mod_name .. unit_name .. " Entering: " .. unit_name);
+    Isaac.DebugString(mod_name .. ":" .. unit_name .. ":" .. " Entering: " .. unit_name);
 
     local items_to_spawn = 0;
     local num_players = game:GetNumPlayers();
@@ -66,21 +65,9 @@ function mod:count_items()
             end;
         end;
     end;
-    Isaac.DebugString(mod_name .. unit_name .. " Finished: " .. unit_name .. " items_to_spawn: " .. items_to_spawn);
+    Isaac.DebugString(mod_name  .. ":" .. unit_name  .. ":" .. " Finished: " .. unit_name .. " items_to_spawn: " .. items_to_spawn);
     return items_to_spawn;
 end;
-
-function mod:get_location()
-    
-    local location = Vector(0,0);
-    local room  = game:GetRoom();
-
-    local room_center = room:GetCenterPos();
-
-    location = room:FindFreePickupSpawnPosition(room_center, 2);
-    print("location: " .. tostring(location));
-    return location;
-end
 
 
 --------------------------------------------------------------------------------------------------------
@@ -88,46 +75,48 @@ end
 --------------------------------------------------------------------------------------------------------
 function mod:spawn_items()
     
-    local unit_name = "spawn_items:";
-    Isaac.DebugString(mod_name .. unit_name .. " Entering: " .. unit_name);
+    local unit_name = "spawn_items";
+    Isaac.DebugString(mod_name  .. ":" .. " Entering: " .. unit_name);
 
-    local items_to_spawn = mod.count_items();
-
-    local num_players = game:GetNumPlayers();
-    local player = Isaac.GetPlayer(0);
-
-    local in_front_of_player = Vector(20, 20) +  player.Position; 
-    local zero = Vector(0,0);
-
-    --Get the seed for the game
-    local seeds = game:GetSeeds();
-    local game_seed = seeds:GetNextSeed();
-    
     --Get the current room type
-    local the_room  = game:GetRoom();
-    local room_type = the_room:GetType();
-
-    --Get the item pool for the game
-    local item_pool = game:GetItemPool();
+    local room = game:GetRoom();
     
-    --Get the item pool for the current room
-    local item_pool_for_room = item_pool:GetPoolForRoom(room_type, game_seed)
-
     --Check if the current room is a treasure room
-    Isaac.DebugString(mod_name .. unit_name .. " items_to_spawn: " .. items_to_spawn);
-    Isaac.DebugString(mod_name .. unit_name .. " is_first_visit: " .. tostring(the_room:IsFirstVisit()));
-    Isaac.DebugString(mod_name .. unit_name .. " room_type: " .. room_type);
-    if (room_type == RoomType.ROOM_TREASURE or room_type == RoomType.ROOM_PLANETARIUM) and items_to_spawn > 0 and the_room:IsFirstVisit() then
-        for i = 1, num_players - 1 do
-            --get an item id from the pool of the current room
-            local item_id = item_pool:GetCollectible(item_pool_for_room, false, game_seed)
+    if room:IsFirstVisit() then
+
+        local room_type = room:GetType();
+
+        if (room_type == RoomType.ROOM_TREASURE or room_type == RoomType.ROOM_PLANETARIUM) then
             
-            Isaac.Spawn(EntityType.ENTITY_PICKUP, PickupVariant.PICKUP_COLLECTIBLE, item_id, mod.get_location(), zero, nil);
-            items_to_spawn = items_to_spawn - 1;
+            --Get the seed for the game
+            local seeds = game:GetSeeds();
+            local game_seed = seeds:GetNextSeed();
+
+            --Get the item pool for the room
+            local item_pool = game:GetItemPool();
+            local item_pool_for_room = item_pool:GetPoolForRoom(room_type, game_seed)
+            
+            --Get the number of players
+            local num_players = game:GetNumPlayers();
+
+            for i = 1, num_players - 1 do
+
+                --get an item id from the pool of the current room and the location to spawn
+                local item_id = item_pool:GetCollectible(item_pool_for_room, false, game_seed);
+                local location = room:FindFreePickupSpawnPosition(room:GetCenterPos(), 2);
+                
+                Isaac.Spawn(EntityType.ENTITY_PICKUP, PickupVariant.PICKUP_COLLECTIBLE, item_id, location, Vector(0,0), nil);
+
+            end;
         end;
-    end;
+    end;  
+
+    Isaac.DebugString(mod_name  .. ":" .. " is_first_visit: " .. tostring(room:IsFirstVisit())); 
+    Isaac.DebugString(mod_name  .. ":" .. " room_type: "      .. room_type); 
 end;
 
--- mod:AddCallback(ModCallbacks.MC_POST_UPDATE, mod.give_the_trinket, EntityType.ENTITY_PLAYER);
 mod:AddCallback(ModCallbacks.MC_POST_NEW_ROOM, mod.spawn_items, EntityType.ENTITY_PLAYER);
+
 -- mod:AddCallback(ModCallbacks.MC_POST_NEW_LEVEL, mod.count_items, EntityType.ENTITY_PLAYER);
+-- mod:AddCallback(ModCallbacks.MC_POST_UPDATE, mod.give_the_trinket, EntityType.ENTITY_PLAYER);
+
