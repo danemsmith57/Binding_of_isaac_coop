@@ -7,6 +7,9 @@ local mod_name = "More_Treasure";
 local mod = RegisterMod(mod_name, 1);
 local game = Game();
 
+--------------------------------------------------------------------------------------------------------
+--This function spawns the golden horseshoe and the gulp pill at the start of the game. (not used)
+--------------------------------------------------------------------------------------------------------
 function mod:give_the_trinket()
 
     if game:GetFrameCount() == 1 then
@@ -27,21 +30,10 @@ function mod:give_the_trinket()
     end
 end
 
-function mod:spawn_item_at_start_of_floor()
-    local player = Isaac.GetPlayer(0);
-
-    local left_spawn_point = Vector(-50,-50) +  player.Position; 
-    local right_spawn_point = Vector(-50, 50) +  player.Position;
-    local zero = Vector(0,0);
-
-    item1 = math.random(1, 298);
-
-    Isaac.Spawn(EntityType.ENTITY_PICKUP, PickupVariant.PICKUP_COLLECTIBLE, item1, left_spawn_point, zero, nil);
-end
 
 --------------------------------------------------------------------------------------------------------
 --This function controls a count of items that should be spawned for each additional player in the game
---for each floor.
+--for each floor. ( Not used)
 --------------------------------------------------------------------------------------------------------
 function mod:count_items()
     
@@ -81,12 +73,16 @@ function mod:spawn_items()
     --Get the current room type
     local room = game:GetRoom();
     
-    --Check if the current room is a treasure room
+    --Only spawn items on the first visit to the room
     if room:IsFirstVisit() then
 
         local room_type = room:GetType();
 
-        if (room_type == RoomType.ROOM_TREASURE or room_type == RoomType.ROOM_PLANETARIUM) then
+        if (room_type == RoomType.ROOM_TREASURE    or
+            room_type == RoomType.ROOM_PLANETARIUM or
+            room_type == RoomType.ROOM_ANGEL       or
+            room_type == RoomType.ROOM_DEVIL       or
+            room_Type == RoomType.ROOM_BOSSRUSH)   then
             
             --Get the seed for the game
             local seeds = game:GetSeeds();
@@ -112,11 +108,10 @@ function mod:spawn_items()
     end;  
 
     Isaac.DebugString(mod_name  .. ":" .. " is_first_visit: " .. tostring(room:IsFirstVisit())); 
-    Isaac.DebugString(mod_name  .. ":" .. " room_type: "      .. room_type); 
+    Isaac.DebugString(mod_name  .. ":" .. " room_type: "      .. tostring(room_type)); 
 end;
 
-mod:AddCallback(ModCallbacks.MC_POST_NEW_ROOM, mod.spawn_items, EntityType.ENTITY_PLAYER);
 
--- mod:AddCallback(ModCallbacks.MC_POST_NEW_LEVEL, mod.count_items, EntityType.ENTITY_PLAYER);
--- mod:AddCallback(ModCallbacks.MC_POST_UPDATE, mod.give_the_trinket, EntityType.ENTITY_PLAYER);
+--Add the callback
+mod:AddCallback(ModCallbacks.MC_POST_NEW_ROOM, mod.spawn_items, EntityType.ENTITY_PLAYER);
 
