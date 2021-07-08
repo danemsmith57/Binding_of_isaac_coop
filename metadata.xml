@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<metadata>
+    <name>More_Treasure!</name>
+    <directory>more_treasure!</directory>
+    <id>2540677734</id>
+    <description>Play co-op with your friends and don't get item starved. Extra items have been added to treasure rooms, planetariums, boss rush, angel rooms, devil rooms with some other bonuses along the way. </description>
+    <version>1.2</version>
+    <visibility>Public</visibility>
+    <tag id="Lua"/>
+    <tag id="Items"/>
+    <tag id="Pickups"/>
+</metadata>
