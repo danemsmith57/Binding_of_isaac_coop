@@ -6,8 +6,10 @@ local game = Game();
 --------------------------------------------------------------------------------------------------------
 --This function spawns an extra item in the treasure room for each extra player in the game
 --------------------------------------------------------------------------------------------------------
-function spawn_items_for_players(room)
+function spawn_items_for_players(room, item_id)
     
+    item_id = item_id or 0;
+
     local unit_name = "spawn_items";
     Isaac.DebugString(mod_name  .. ":" .. " Entering: " .. unit_name);
 
@@ -29,8 +31,11 @@ function spawn_items_for_players(room)
 
         for i = 1, num_players - 1 do
 
-            --get an item id from the pool of the current room and the location to spawn
-            local item_id = item_pool:GetCollectible(item_pool_for_room, false, game_seed);
+            if item_id == 0 then
+                --get an item id from the pool of the current room and the location to spawn
+                local item_id = item_pool:GetCollectible(item_pool_for_room, false, game_seed);
+            end;
+            
             local location = room:FindFreePickupSpawnPosition(room:GetCenterPos(), 5);
             
             the_item = Isaac.Spawn(EntityType.ENTITY_PICKUP, PickupVariant.PICKUP_COLLECTIBLE, item_id, location, Vector(0,0), nil);
@@ -94,7 +99,7 @@ function mod:spawn_items_post_fight(_)
         entities = Isaac.GetRoomEntities();
         for _, entity in pairs(entities) do
             if entity.Variant == PickupVariant.PICKUP_COLLECTIBLE then
-                spawn_items_for_players(room);
+                spawn_items_for_players(room, entity.SubType);
                 break;
             end;
         end;   
@@ -178,4 +183,3 @@ end; --End spawn_chests
 mod:AddCallback(ModCallbacks.MC_POST_NEW_ROOM, mod.spawn_items, EntityType.ENTITY_PLAYER);
 mod:AddCallback(ModCallbacks.MC_PRE_SPAWN_CLEAN_AWARD, mod.spawn_items_post_fight);
 mod:AddCallback(ModCallbacks.MC_POST_NEW_LEVEL, mod.spawn_chests, EntityType.ENTITY_PLAYER);
-mod:AddCallback(ModCallbacks.MC_POST_NEW_LEVEL, mod.set_sacrifice_flag_for_floor);
