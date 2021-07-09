@@ -33,7 +33,14 @@ function spawn_items_for_players(room)
             local item_id = item_pool:GetCollectible(item_pool_for_room, false, game_seed);
             local location = room:FindFreePickupSpawnPosition(room:GetCenterPos(), 5);
             
-            Isaac.Spawn(EntityType.ENTITY_PICKUP, PickupVariant.PICKUP_COLLECTIBLE, item_id, location, Vector(0,0), nil);
+            the_item = Isaac.Spawn(EntityType.ENTITY_PICKUP, PickupVariant.PICKUP_COLLECTIBLE, item_id, location, Vector(0,0), nil);
+            
+            --Only in devil deals should the price be set
+            if room_type == RoomType.ROOM_DEVIL then
+                the_item_entity_pickup = the_item:ToPickup();
+                the_item_entity_pickup.AutoUpdatePrice = true;
+                the_item_entity_pickup.Price = PickupPrice.PRICE_TWO_HEARTS;
+            end;
 
         end;
     end;  
@@ -52,13 +59,13 @@ function mod:spawn_items()
 
     if (room_type == RoomType.ROOM_TREASURE    or
         room_type == RoomType.ROOM_PLANETARIUM or
-        room_type == RoomType.ROOM_ANGEL       or
-        room_type == RoomType.ROOM_DEVIL       or
-        room_Type == RoomType.ROOM_BOSSRUSH)   then
+        room_type == RoomType.ROOM_BOSSRUSH)   then
 
             spawn_items_for_players(room);
     
     elseif (room_type == RoomType.ROOM_CHALLENGE or
+            room_type == RoomType.ROOM_ANGEL     or
+            room_type == RoomType.ROOM_DEVIL     or
             room_type == RoomType.ROOM_CURSE)    then
 
         entities = Isaac.GetRoomEntities();
@@ -94,49 +101,6 @@ function mod:spawn_items_post_fight(_)
     end;
 end;
 
---global flag that is set each floor to true
-local sacrifice_allowed = false;
-
---------------------------------------------------------------------------------------------------------
---This function sets the flag that allows items to spawn for the sacrifice room
---------------------------------------------------------------------------------------------------------
-function mod:set_sacrifice_flag_for_floor()
-    local unit_name = "set_sacrifice_flag_for_floor";
-    
-    Isaac.DebugString(mod_name  .. ":" .. " Entering: " .. unit_name);
-    Isaac.DebugString(mod_name  .. ":" .. " sacrifice_allowed (OLD): " .. tostring(sacrifice_allowed));
-
-    sacrifice_allowed = true;
-    Isaac.DebugString(mod_name  .. ":" .. " sacrifice_allowed (NEW): " .. tostring(sacrifice_allowed));
-end;
-
-
---------------------------------------------------------------------------------------------------------
---This function will spawn extra items for each player in the sacrfice room if an item spawns
---------------------------------------------------------------------------------------------------------
-function mod:spawn_items_post_damage(_,_,_,_,_)
-    
-    local unit_name = "spawn_items_post_damage";
-
-    --Get the current room
-    local room = game:GetRoom();
-    local room_type = room:GetType();
-
-    if (room_type == RoomType.ROOM_SACRIFICE)  then
-
-        entities = Isaac.GetRoomEntities();
-
-        for _, entity in pairs(entities) do
-
-            if entity.Variant == PickupVariant.PICKUP_COLLECTIBLE and sacrifice_allowed then
-                spawn_items_for_players(room);
-                sacrifice_allowed = false;
-                break;
-            end;
-        end;          
-    end;
-end;
-
 
 --------------------------------------------------------------------------------------------------------
 --This function spawns extra chests on the 'Chest' and 'Dark Room' floors for each extra player
@@ -153,12 +117,14 @@ function mod:spawn_chests()
     --Only execute on the 'Chest' or 'Dark Room' floor
     if absolute_stage == LevelStage.STAGE6 then
     
-        entities = Isaac.GetRoomEntities();
+        local entities = Isaac.GetRoomEntities();
 
         --Counter to indirectly determine whether the player is on the 'Chest' or 'Dark Room'
-        chest_counter = 0;
-        spawn_chests = false;
-        positions = {};
+        local chest_counter = 0;
+        local spawn_chests = false;
+        local positions = {};
+        local n_chests = 4;
+        local chest_type = nil;
 
         --Loop over all the entities in the room and count the chests (if they're present)
         for _, entity in pairs(entities) do
@@ -167,7 +133,7 @@ function mod:spawn_chests()
                 chest_counter = chest_counter + 1;
                 positions[chest_counter] = entity.Position;
 
-                if chest_counter == 4 then
+                if chest_counter == n_chests then
                     --We're in the 'Dark Room'
                     chest_type = PickupVariant.PICKUP_REDCHEST;
                     spawn_chests = true;
@@ -179,7 +145,7 @@ function mod:spawn_chests()
                 chest_counter = chest_counter + 1;
                 positions[chest_counter] = entity.Position;
 
-                if chest_counter == 4 then
+                if chest_counter == n_chests then
                     -- We're in the 'Chest' 
                     chest_type = PickupVariant.PICKUP_LOCKEDCHEST;
                     spawn_chests = true;
@@ -195,7 +161,6 @@ function mod:spawn_chests()
         
             --Get the number of players
             local num_players = game:GetNumPlayers();
-            local n_chests = 4;
             for i = 1, (num_players - 1) * n_chests do
                 
                 local idx = n_chests - i % n_chests;
@@ -212,6 +177,5 @@ end; --End spawn_chests
 --Add the callback
 mod:AddCallback(ModCallbacks.MC_POST_NEW_ROOM, mod.spawn_items, EntityType.ENTITY_PLAYER);
 mod:AddCallback(ModCallbacks.MC_PRE_SPAWN_CLEAN_AWARD, mod.spawn_items_post_fight);
-mod:AddCallback(ModCallbacks.MC_ENTITY_TAKE_DMG, mod.spawn_items_post_damage, EntityType.ENTITY_PLAYER);
 mod:AddCallback(ModCallbacks.MC_POST_NEW_LEVEL, mod.spawn_chests, EntityType.ENTITY_PLAYER);
 mod:AddCallback(ModCallbacks.MC_POST_NEW_LEVEL, mod.set_sacrifice_flag_for_floor);
