@@ -2,7 +2,6 @@ local mod_name = "More_Treasure";
 local mod = RegisterMod(mod_name, 1);
 local game = Game();
 
-
 --------------------------------------------------------------------------------------------------------
 --This function spawns an extra item in the treasure room for each extra player in the game
 --------------------------------------------------------------------------------------------------------
@@ -11,7 +10,6 @@ function spawn_items_for_players(room, item_id)
     item_id = item_id or 0;
 
     local unit_name = "spawn_items";
-    Isaac.DebugString(mod_name  .. ":" .. " Entering: " .. unit_name);
 
     --Only spawn items on the first visit to the room
     if room:IsFirstVisit() then
@@ -32,13 +30,13 @@ function spawn_items_for_players(room, item_id)
         for i = 1, num_players - 1 do
 
             if item_id == 0 then
-                --get an item id from the pool of the current room and the location to spawn
+                --get an item id from the pool of the current room and the new_position to spawn
                 local item_id = item_pool:GetCollectible(item_pool_for_room, false, game_seed);
             end;
             
-            local location = room:FindFreePickupSpawnPosition(room:GetCenterPos(), 5);
+            local new_position = room:FindFreePickupSpawnPosition(room:GetCenterPos(), 5);
             
-            the_item = Isaac.Spawn(EntityType.ENTITY_PICKUP, PickupVariant.PICKUP_COLLECTIBLE, item_id, location, Vector(0,0), nil);
+            the_item = Isaac.Spawn(EntityType.ENTITY_PICKUP, PickupVariant.PICKUP_COLLECTIBLE, item_id, new_position, Vector(0,0), nil);
             
             --Only in devil deals should the price be set
             if room_type == RoomType.ROOM_DEVIL then
@@ -57,7 +55,7 @@ end;
 -- additional players in the game. If the criteria is met, it calls spawn_items_for_players
 --------------------------------------------------------------------------------------------------------
 function mod:spawn_items()
-    
+
     --Get the current room
     local room = game:GetRoom();
     local room_type = room:GetType();
@@ -89,13 +87,15 @@ end;
 --------------------------------------------------------------------------------------------------------
 --This function spawns extra items for each player if the room gives an item as a reward
 --------------------------------------------------------------------------------------------------------
-function mod:spawn_items_post_fight(_)
+function mod:spawn_items_post_fight()
     
     --Get the current room
     local room = game:GetRoom();
     local room_type = room:GetType();
 
-    if (room_type == RoomType.ROOM_MINIBOSS)  then
+    if (room_type == RoomType.ROOM_MINIBOSS  or
+        room_type == RoomType.ROOM_BOSSRUSH) then
+            
         entities = Isaac.GetRoomEntities();
         for _, entity in pairs(entities) do
             if entity.Variant == PickupVariant.PICKUP_COLLECTIBLE then
@@ -113,7 +113,6 @@ end;
 function mod:spawn_chests()
    
     local unit_name = "spawn_chests";
-    Isaac.DebugString(mod_name  .. ":" .. " Entering: " .. unit_name);
 
     --Get the current room type
     local level = game:GetLevel();
@@ -169,17 +168,70 @@ function mod:spawn_chests()
             for i = 1, (num_players - 1) * n_chests do
                 
                 local idx = n_chests - i % n_chests;
-                local location = room:FindFreePickupSpawnPosition(positions[idx], 30); 
+                local new_position = room:FindFreePickupSpawnPosition(positions[idx], 30); 
 
-                Isaac.Spawn(EntityType.ENTITY_PICKUP, chest_type, 1, location, Vector(0,0), nil);              
+                Isaac.Spawn(EntityType.ENTITY_PICKUP, chest_type, 1, new_position, Vector(0,0), nil);              
             end; 
         end;
     end; -- only execute on the 'Dark Room' or 'Chest' floor
-    Isaac.DebugString(mod_name  .. ":" .. " Exiting: " .. unit_name);
 end; --End spawn_chests
 
 
+--------------------------------------------------------------------------------------------------------
+--This function clears the waves_done table each floor
+--------------------------------------------------------------------------------------------------------
+local waves_done = {};
+function mod:set_wave_counter()
+    for i = 1, game:GetGreedWavesNum() do
+        waves_done[i] = false;
+    end;
+end;
+
+
+require("math")
+--------------------------------------------------------------------------------------------------------
+--This function spawns an extra coin into the game for each player after each wave
+--------------------------------------------------------------------------------------------------------
+function mod:spawn_more_coins()
+    
+    if game:IsGreedMode() then
+        local level = game:GetLevel();
+        local wave = level.GreedModeWave;
+
+        if not waves_done[wave] then
+            
+            local seeds = game:GetSeeds();
+
+            math.randomseed(seeds:GetNextSeed());
+
+            --Get the number of coins that should be dropped for each player
+            local num_coins = 0
+            if wave < game:GetGreedWavesNum() - 2 then
+                num_coins = math.random(2,3);
+            else
+                num_coins = math.random(3,4); 
+            end;
+            
+            waves_done[wave] = true;
+            
+            --Get the current room
+            local room = game:GetRoom();
+            local room_type = room:GetType();
+
+            local position = Vector(320,280);
+        
+            --Spawn the coins
+            for i = 1, num_coins * (game:GetNumPlayers() - 1)  do
+                local free_position = room:FindFreePickupSpawnPosition(position, 20);
+                Isaac.Spawn(EntityType.ENTITY_PICKUP, PickupVariant.PICKUP_COIN, 1, free_position, Vector(0,0), nil);              
+            end;
+        end;
+    end;
+end;
+
 --Add the callback
-mod:AddCallback(ModCallbacks.MC_POST_NEW_ROOM, mod.spawn_items, EntityType.ENTITY_PLAYER);
+mod:AddCallback(ModCallbacks.MC_POST_NEW_ROOM, mod.spawn_items);
+mod:AddCallback(ModCallbacks.MC_POST_NEW_LEVEL, mod.spawn_chests);
 mod:AddCallback(ModCallbacks.MC_PRE_SPAWN_CLEAN_AWARD, mod.spawn_items_post_fight);
-mod:AddCallback(ModCallbacks.MC_POST_NEW_LEVEL, mod.spawn_chests, EntityType.ENTITY_PLAYER);
+mod:AddCallback(ModCallbacks.MC_POST_PICKUP_INIT, mod.spawn_more_coins, PickupVariant.PICKUP_COIN);
+mod:AddCallback(ModCallbacks.MC_POST_NEW_LEVEL, mod.set_wave_counter);
